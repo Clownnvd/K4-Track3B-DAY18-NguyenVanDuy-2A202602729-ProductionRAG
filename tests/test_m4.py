@@ -1,5 +1,6 @@
 """Tests for Module 4: Evaluation."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.m4_eval import load_test_set, evaluate_ragas, failure_analysis, EvalResult
 

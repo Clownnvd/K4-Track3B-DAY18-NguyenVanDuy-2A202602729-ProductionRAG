@@ -13,6 +13,19 @@ Bài tập **cá nhân** — implement toàn bộ 5 modules:
 M1 Chunking → M5 Enrichment → M2 Hybrid Search → M3 Reranking → LLM Answer → M4 RAGAS Eval
 ```
 
+## Kết quả bài nộp
+
+Lượt đo ngày 05/10/2026 chạy đủ 20 câu với Gemini `gemini-3.5-flash-lite` làm judge. Hai báo cáo đều có `status=complete` và `scores_valid=true`.
+
+| Metric | Naive Baseline | Production | Chênh lệch |
+|---|---:|---:|---:|
+| Faithfulness | 0.9357 | **0.9661** | +0.0304 |
+| Answer Relevancy | 0.6177 | **0.7834** | +0.1658 |
+| Context Precision | 0.8500 | **0.8750** | +0.0250 |
+| Context Recall | 0.8250 | **0.9250** | +0.1000 |
+
+Production dùng 26 tài liệu có text, 101 child chunk, 26 parent chunk và enrichment `gemini_combined`. Hai PDF scan không có text layer được bỏ qua có cảnh báo thay vì đưa dữ liệu rỗng vào index. Chi tiết nằm trong `reports/ragas_report.json` và `analysis/failure_analysis.md`.
+
 Xem **ASSIGNMENT.md** để biết chi tiết từng module và timeline.
 
 ## Prerequisites
@@ -21,7 +34,7 @@ Xem **ASSIGNMENT.md** để biết chi tiết từng module và timeline.
 |-----------|-----------|----------|
 | Docker (Qdrant) | ✅ Có | M2 Dense Search |
 | Python 3.11+ | ✅ Có | Tất cả modules (RAGAS cần 3.11+ cho asyncio) |
-| `OPENAI_API_KEY` | ⚠️ M4+M5 | RAGAS eval (M4), Enrichment LLM (M5) |
+| `GEMINI_API_KEY` | ⚠️ M4+M5 | Gemini sinh câu trả lời/làm giàu và làm judge cho RAGAS |
 
 **Pre-download models** (tránh timeout trong lab):
 ```bash
@@ -57,7 +70,7 @@ python -m venv .venv
 ```bash
 docker compose up -d                    # Khởi động Qdrant vector database
 pip install -r requirements.txt
-cp .env.example .env                    # Tạo file .env và điền OPENAI_API_KEY
+cp .env.example .env                    # Tạo file .env và điền GEMINI_API_KEY
 python naive_baseline.py                # Khởi tạo baseline
 ```
 
@@ -65,7 +78,7 @@ python naive_baseline.py                # Khởi tạo baseline
 ```powershell
 docker compose up -d                    # Khởi động Qdrant vector database
 pip install -r requirements.txt
-Copy-Item .env.example .env             # Tạo file .env và điền OPENAI_API_KEY
+Copy-Item .env.example .env             # Tạo file .env và điền GEMINI_API_KEY
 python naive_baseline.py                # Khởi tạo baseline
 ```
 *(Nếu dùng Windows CMD: dùng `copy .env.example .env` thay cho `Copy-Item`)*

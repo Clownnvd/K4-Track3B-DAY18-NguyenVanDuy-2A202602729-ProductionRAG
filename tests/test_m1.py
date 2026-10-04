@@ -1,5 +1,6 @@
 """Tests for Module 1: Advanced Chunking."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.m1_chunking import (chunk_basic, chunk_semantic, chunk_hierarchical,
                               chunk_structure_aware, compare_strategies, load_documents, Chunk)

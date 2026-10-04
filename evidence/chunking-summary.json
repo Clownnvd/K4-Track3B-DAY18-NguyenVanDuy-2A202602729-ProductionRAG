@@ -1,0 +1,6 @@
+{
+  "basic": {"count": 51, "average_characters": 410, "min_characters": 273, "max_characters": 565},
+  "semantic": {"count": 208, "average_characters": 99, "min_characters": 6, "max_characters": 354, "threshold": 0.85},
+  "hierarchical": {"count": 99, "average_characters": 211, "min_characters": 9, "max_characters": 256, "parents": 11},
+  "structure_aware": {"count": 106, "average_characters": 196, "min_characters": 86, "max_characters": 788}
+}

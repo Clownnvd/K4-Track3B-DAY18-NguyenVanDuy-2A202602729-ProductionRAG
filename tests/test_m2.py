@@ -1,5 +1,6 @@
 """Tests for Module 2: Hybrid Search."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.m2_search import segment_vietnamese, BM25Search, reciprocal_rank_fusion, SearchResult
 

@@ -30,7 +30,7 @@ def main():
     print("\n📌 STEP 1: Running Basic RAG Baseline...")
     print("-" * 40)
     from naive_baseline import main as run_baseline
-    run_baseline()
+    naive_results = run_baseline()
 
     # Step 2: Production Pipeline
     print("\n📌 STEP 2: Running Production Pipeline...")
@@ -71,6 +71,8 @@ def main():
     print("  1. Điền analysis/failure_analysis.md")
     print("  2. Viết analysis/reflections/reflection_[HọTên].md")
     print("  3. Chạy: python check_lab.py")
+    if not naive_results.get('scores_valid') or not prod_results.get('scores_valid'):
+        raise SystemExit('Chưa có đủ điểm RAGAS thật cho hai cấu hình; không coi bảng điểm dự phòng là bài đã xong.')
 
 
 if __name__ == "__main__":

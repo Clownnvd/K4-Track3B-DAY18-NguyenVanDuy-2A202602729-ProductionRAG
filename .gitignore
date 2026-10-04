@@ -6,3 +6,14 @@ __pycache__/
 qdrant_data/
 *.egg-info/
 CODELAB.md
+.venv*/
+.cache/
+logs/
+WORK-CHECKPOINT.md
+vlearn-instructions.json
+reports/ragas_smoke.json
+evidence/main-fresh.log
+evidence/pytest.log
+evidence/pytest-fresh.xml
+evidence/red-chunking.log
+evidence/chunking-comparison.log

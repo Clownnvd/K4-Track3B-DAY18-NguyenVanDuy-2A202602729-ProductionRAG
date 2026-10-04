@@ -7,12 +7,18 @@ load_dotenv()
 
 # --- API Keys ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'gemini')
+LLM_MODEL = os.getenv('LLM_MODEL', 'gemini-3.5-flash-lite')
+EVAL_MODEL = os.getenv('EVAL_MODEL', LLM_MODEL)
+ENABLE_LLM_EVAL = os.getenv('ENABLE_LLM_EVAL', '0') == '1'
+ENABLE_LLM_ENRICHMENT = os.getenv('ENABLE_LLM_ENRICHMENT', '0') == '1'
 
 # --- Qdrant ---
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
-COLLECTION_NAME = "lab18_production"
-NAIVE_COLLECTION = "lab18_naive"
+QDRANT_HOST = os.getenv('QDRANT_HOST', '127.0.0.1')
+QDRANT_PORT = int(os.getenv('QDRANT_PORT', '6333'))
+COLLECTION_NAME = 'lab18_duy_production'
+NAIVE_COLLECTION = 'lab18_duy_naive'
 
 # --- Embedding ---
 EMBEDDING_MODEL = "BAAI/bge-m3"

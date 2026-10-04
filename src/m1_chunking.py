@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Module 1: Advanced Chunking Strategies
 =======================================
@@ -9,7 +7,12 @@ So sánh với basic chunking (baseline) để thấy improvement.
 Test: pytest tests/test_m1.py
 """
 
-import os, sys, glob, re
+from __future__ import annotations
+
+import glob
+import os
+import re
+import sys
 from dataclasses import dataclass, field
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -19,7 +22,7 @@ if hasattr(sys.stderr, "reconfigure"):
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (DATA_DIR, HIERARCHICAL_PARENT_SIZE, HIERARCHICAL_CHILD_SIZE,
-                    SEMANTIC_THRESHOLD)
+                    SEMANTIC_THRESHOLD)  # noqa: E402
 
 
 @dataclass
@@ -92,20 +95,23 @@ def chunk_semantic(text: str, threshold: float = SEMANTIC_THRESHOLD,
     Split text by sentence similarity — nhóm câu cùng chủ đề.
     Tốt hơn basic vì không cắt giữa ý.
     """
-    # TODO: Implement semantic chunking
-    # 1. from sentence_transformers import SentenceTransformer
-    #    from numpy import dot
-    #    from numpy.linalg import norm
-    # 2. metadata = metadata or {}
-    # 3. Split text thành sentences: re.split(r'(?<=[.!?])\s+|\n\n', text)
-    # 4. model = SentenceTransformer("all-MiniLM-L6-v2")
-    #    embeddings = model.encode(sentences)
-    # 5. cosine_sim(a, b) = dot(a, b) / (norm(a) * norm(b) + 1e-9)
-    # 6. Duyệt từ sentence[1]:
-    #      - sim(embedding[i-1], embedding[i]) < threshold → tách chunk mới
-    #      - else: gộp vào chunk hiện tại
-    # 7. Return [Chunk(text=joined_group, metadata={..., "strategy": "semantic"})]
-    return []
+    if not -1 <= threshold <= 1:
+        raise ValueError('threshold must be in [-1, 1]')
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n\n', text) if s.strip()]
+    if not sentences:
+        return []
+    from src.model_cache import sentence_model
+    model = sentence_model('sentence-transformers/all-MiniLM-L6-v2')
+    vectors = model.encode(sentences, normalize_embeddings=True, batch_size=16)
+    groups, current = [], [sentences[0]]
+    for i in range(1, len(sentences)):
+        if float(vectors[i-1] @ vectors[i]) < threshold:
+            groups.append(current)
+            current = []
+        current.append(sentences[i])
+    groups.append(current)
+    return [Chunk(' '.join(group), {**(metadata or {}), 'strategy': 'semantic', 'chunk_index': i})
+            for i, group in enumerate(groups)]
 
 
 # ─── Strategy 2: Hierarchical Chunking ──────────────────
@@ -121,16 +127,18 @@ def chunk_hierarchical(text: str, parent_size: int = HIERARCHICAL_PARENT_SIZE,
     Returns:
         (parents, children) — mỗi child có parent_id link đến parent.
     """
-    # TODO: Implement hierarchical chunking
-    # 1. metadata = metadata or {}
-    # 2. Split text bằng "\n\n" → paragraphs
-    # 3. Gộp paragraphs thành parent chunks (mỗi parent ≤ parent_size chars):
-    #      pid = f"parent_{len(parents)}"
-    #      parents.append(Chunk(text=..., metadata={..., "chunk_type": "parent", "parent_id": pid}))
-    # 4. Mỗi parent → split thành children (mỗi child ≤ child_size chars):
-    #      children.append(Chunk(text=..., metadata={..., "chunk_type": "child"}, parent_id=pid))
-    # 5. return (parents, children)
-    return ([], [])
+    if parent_size <= 0 or child_size <= 0 or child_size >= parent_size:
+        raise ValueError('Require 0 < child_size < parent_size')
+    import hashlib
+    metadata = dict(metadata or {})
+    prefix = hashlib.sha256((str(metadata.get('source', ''))+'\0'+text).encode()).hexdigest()[:16]
+    parents, children = [], []
+    for i, parent_text in enumerate(_bounded_spans(text, parent_size)):
+        pid = f'{prefix}:parent:{i}'
+        parents.append(Chunk(parent_text, {**metadata, 'chunk_type': 'parent', 'parent_id': pid}))
+        for j, child_text in enumerate(_bounded_spans(parent_text, child_size)):
+            children.append(Chunk(child_text, {**metadata, 'chunk_type': 'child', 'chunk_id': f'{pid}:child:{j}'}, pid))
+    return parents, children
 
 
 # ─── Strategy 3: Structure-Aware Chunking ────────────────
@@ -141,14 +149,40 @@ def chunk_structure_aware(text: str, metadata: dict | None = None) -> list[Chunk
     Parse markdown headers → chunk theo logical structure.
     Giữ nguyên tables, code blocks, lists — không cắt giữa chừng.
     """
-    # TODO: Implement structure-aware chunking
-    # 1. metadata = metadata or {}
-    # 2. sections = re.split(r'(^#{1,3}\s+.+$)', text, flags=re.MULTILINE)
-    # 3. Duyệt sections:
-    #      - Nếu match header (^#{1,3}\s+): lưu header hiện tại, tạo chunk cho content trước đó
-    #      - Else: gộp vào content hiện tại
-    # 4. Return [Chunk(text=header+content, metadata={..., "section": header, "strategy": "structure"})]
-    return []
+    chunks, lines, section, fence = [], [], '', None
+    def flush():
+        if ''.join(lines).strip():
+            chunks.append(Chunk(''.join(lines).strip(), {**(metadata or {}), 'section': section, 'strategy': 'structure'}))
+    for line in text.splitlines(keepends=True):
+        marker = re.match(r'^\s*(`{3,}|~{3,})', line)
+        if marker:
+            token = marker.group(1)[0]
+            fence = None if fence == token else token if fence is None else fence
+        header = re.match(r'^#{1,6}\s+.+', line) if fence is None and not marker else None
+        if header:
+            flush()
+            lines = []
+            section = header.group(0).strip()
+        lines.append(line)
+    flush()
+    return chunks
+
+
+def _bounded_spans(text: str, size: int) -> list[str]:
+    """Preserve all non-whitespace content; prefer paragraph/sentence boundaries."""
+    remaining, result = text.strip(), []
+    while remaining:
+        if len(remaining) <= size:
+            result.append(remaining)
+            break
+        cut = remaining.rfind('\n\n', 0, size+1)
+        if cut < size//2:
+            cut = remaining.rfind(' ', 0, size+1)
+        if cut <= 0:
+            cut = size
+        result.append(remaining[:cut].strip())
+        remaining = remaining[cut:].lstrip()
+    return [part for part in result if part]
 
 
 # ─── A/B Test: Compare All Strategies ────────────────────

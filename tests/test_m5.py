@@ -1,5 +1,6 @@
 """Tests for Module 5: Enrichment Pipeline."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.m5_enrichment import (
     summarize_chunk, generate_hypothesis_questions,
